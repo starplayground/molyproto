@@ -3,6 +3,14 @@ export interface Message {
   content: string;
 }
 
+export interface Conversation {
+  id: string;
+  title: string;
+  messages: Message[];
+  summary: string | null;
+  lastActive: Date;
+}
+
 export interface ConversationSummary {
   summary: string;
 }

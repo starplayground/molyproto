@@ -14,7 +14,7 @@ const ChatPanel: React.FC = () => {
   }, [messages]);
 
   return (
-    <div className="w-full lg:w-2/3 flex flex-col border-r border-border">
+    <div className="w-full flex-1 flex flex-col border-r border-border">
       {/* Chat Messages Container */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {/* Welcome Message */}

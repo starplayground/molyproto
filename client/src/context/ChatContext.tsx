@@ -129,15 +129,15 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setSummary(mostRecentConv.summary);
         } else {
           // Create a new conversation if none exists
-          newConversation();
+          createNewConversation();
         }
       } catch (error) {
         console.error("Error parsing stored conversations:", error);
-        newConversation();
+        createNewConversation();
       }
     } else {
       // Create a new conversation if none exists
-      newConversation();
+      createNewConversation();
     }
   }, []);
 
@@ -149,7 +149,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [conversations]);
 
   // Create a new conversation
-  const newConversation = useCallback(() => {
+  const createNewConversation = () => {
     const newId = Date.now().toString();
     const newConv: Conversation = {
       id: newId,
@@ -162,6 +162,10 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setCurrentConversationId(newId);
     setMessages([]);
     setSummary(null);
+  };
+  
+  const newConversation = useCallback(() => {
+    createNewConversation();
   }, []);
 
   // Select a conversation
@@ -270,8 +274,11 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         );
       } else {
         setSummarizing(true);
+        const assistantMessage: Message = { role: "assistant", content: data.assistant };
+        const messagesForSummary = [...updatedMessages, assistantMessage];
+        
         const summaryResponse = await apiRequest("POST", "/api/summarize", {
-          messages: [...updatedMessages, { role: "assistant", content: data.assistant }],
+          messages: messagesForSummary,
           apiKey: apiKey,  // Send API key to backend for summary
         });
         

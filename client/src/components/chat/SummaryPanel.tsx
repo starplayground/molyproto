@@ -21,7 +21,7 @@ const SummaryPanel: React.FC = () => {
   };
 
   return (
-    <div className="hidden lg:flex lg:w-1/3 flex-col bg-muted/30">
+    <div className="hidden lg:flex lg:w-1/4 flex-col bg-muted/30">
       <div className="p-4 border-b border-border flex justify-between items-center">
         <h2 className="text-lg font-medium">Conversation Summary</h2>
         <Button

@@ -61,6 +61,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const response = await apiRequest("POST", "/api/chat", {
         message: content,
         messages: messages,
+        apiKey: apiKey,  // Send API key to backend
       });
 
       const data = await response.json();
@@ -75,7 +76,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } else {
         setSummarizing(true);
         const summaryResponse = await apiRequest("POST", "/api/summarize", {
-          messages: [...messages, userMessage, { role: "assistant", content: data.assistant }]
+          messages: [...messages, userMessage, { role: "assistant", content: data.assistant }],
+          apiKey: apiKey,  // Send API key to backend for summary
         });
         
         const summaryData = await summaryResponse.json();

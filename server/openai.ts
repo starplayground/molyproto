@@ -8,7 +8,10 @@ export const getOpenAIInstance = (apiKey: string) => {
     throw new Error("OpenAI API key is required");
   }
   
-  return new OpenAI({ apiKey });
+  return new OpenAI({ 
+    apiKey,
+    baseURL: process.env.OPENAI_BASE_URL || "https://api.openai-proxy.com/v1"
+  });
 };
 
 // Helper function to convert our Message type to OpenAI's ChatCompletionMessageParam
@@ -52,8 +55,8 @@ export async function sendChatMessage(
 
     // Call OpenAI API
     const response = await openai.chat.completions.create({
-      // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
-      model: "gpt-4o",
+      // Using a model compatible with OpenAI proxy
+      model: "gpt-3.5-turbo",
       messages: messages,
       temperature: 0.7,
       max_tokens: 1000,
@@ -101,8 +104,8 @@ export async function summarizeConversation(
 
     // Call OpenAI API for summarization
     const response = await openai.chat.completions.create({
-      // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
-      model: "gpt-4o",
+      // Using a model compatible with OpenAI proxy
+      model: "gpt-3.5-turbo",
       messages: allMessages,
       temperature: 0.5,
       max_tokens: 1000,

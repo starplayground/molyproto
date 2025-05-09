@@ -28,55 +28,50 @@ const MessageInput: React.FC = () => {
     if (e.key === "Enter" && !e.shiftKey && !showShortcutMenu) {
       e.preventDefault();
       handleSubmit(e);
-    } else if (e.key === '@') {
-      // 记录@符号的位置，用于展示快捷菜单
-      if (textareaRef.current) {
-        const { top, left, height } = textareaRef.current.getBoundingClientRect();
-        const cursorPos = textareaRef.current.selectionStart;
-        
-        // 创建临时元素来计算光标位置
-        const textBeforeCursor = message.substring(0, cursorPos);
-        const span = document.createElement('span');
-        span.textContent = textBeforeCursor;
-        span.style.position = 'absolute';
-        span.style.visibility = 'hidden';
-        span.style.whiteSpace = 'pre-wrap';
-        span.style.width = `${textareaRef.current.clientWidth}px`;
-        document.body.appendChild(span);
-        
-        // 计算光标位置
-        const cursorLeft = left + (span.offsetWidth % textareaRef.current.clientWidth);
-        const lineHeight = parseInt(getComputedStyle(textareaRef.current).lineHeight, 10) || 20;
-        const cursorTop = top + Math.floor(span.offsetHeight / lineHeight) * lineHeight;
-        
-        document.body.removeChild(span);
-        
-        setMenuPosition({ 
-          top: cursorTop + lineHeight,
-          left: cursorLeft 
-        });
-        setCursorPosition(cursorPos + 1);
-      }
+    }
+  };
+
+  const calculateMenuPosition = (cursorPos: number) => {
+    if (textareaRef.current) {
+      const { top, left, height } = textareaRef.current.getBoundingClientRect();
+      
+      // 将菜单放在输入框上方或输入框内合适位置
+      const menuTop = Math.max(top - 220, 10); // 放置在输入框上方，但确保不超出页面顶部
+      const menuLeft = left + 50; // 适当缩进，避免太靠左
+      
+      setMenuPosition({ 
+        top: menuTop,
+        left: menuLeft 
+      });
+      setCursorPosition(cursorPos);
+      
+      // 记录当前位置供调试
+      console.log(`Menu positioned at top: ${menuTop}, left: ${menuLeft}`);
     }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newValue = e.target.value;
+    const curPos = e.target.selectionStart || 0;
     setMessage(newValue);
     
-    // 检查是否输入了@字符，用于显示快捷菜单
-    const curPos = e.target.selectionStart;
-    const isAtChar = newValue[curPos - 1] === '@';
+    // 检测当前输入的字符是否是@
+    const isAtCharJustTyped = curPos > 0 && newValue[curPos - 1] === '@' && (curPos === 1 || newValue[curPos - 2] === ' ' || newValue[curPos - 2] === '\n');
     
-    // 只在刚输入@字符时显示菜单
-    if (isAtChar && !showShortcutMenu) {
+    if (isAtCharJustTyped && !showShortcutMenu) {
+      console.log("@ just typed - showing menu");
       setShowShortcutMenu(true);
-    } else if (showShortcutMenu) {
-      // 当已经显示菜单时，检查光标是否已经不在@附近了
-      const textAfterAt = newValue.substring(cursorPosition);
-      const isOutOfRange = textAfterAt.includes(' ') || textAfterAt.includes('\n');
-      
-      if (isOutOfRange || newValue.length < cursorPosition || curPos < cursorPosition - 1) {
+      calculateMenuPosition(curPos);
+    } 
+    
+    // 如果菜单已打开且光标处于@字符后，但用户继续输入或删除了@，则关闭菜单
+    if (showShortcutMenu) {
+      // 如果完全删除了@或者已经在@后输入了空格/回车，则关闭菜单
+      const atPosition = newValue.lastIndexOf('@');
+      if (atPosition === -1 || curPos < atPosition || 
+          (curPos > atPosition && (newValue.substring(atPosition + 1, curPos).includes(' ') || 
+                                   newValue.substring(atPosition + 1, curPos).includes('\n')))) {
+        console.log("@ context changed - hiding menu");
         setShowShortcutMenu(false);
       }
     }

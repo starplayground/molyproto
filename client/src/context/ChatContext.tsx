@@ -460,7 +460,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setShowNotePrompt,
     setShowModelSelectModal,
     setSelectedModelId,
-    setApiKey,
+    setApiKey: handleSetApiKey,
     setSummary,
     sendMessage: handleSendMessage,
     newConversation,

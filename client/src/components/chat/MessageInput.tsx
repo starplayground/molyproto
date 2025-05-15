@@ -117,7 +117,7 @@ const MessageInput: React.FC = () => {
             value={message}
             onChange={handleChange}
             onKeyDown={handleKeyDown}
-            placeholder="Message ChatAssistant... (Type @ for shortcuts)"
+            placeholder="Message ChatAssistant... "
             className="resize-none pr-12 min-h-[50px] max-h-[150px]"
             disabled={loading}
           />

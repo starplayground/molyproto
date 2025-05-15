@@ -1,0 +1,38 @@
+image: node:18
+
+stages:
+  - install
+  - build
+  - deploy
+
+cache:
+  paths:
+    - node_modules/
+    - client/node_modules/
+
+install_dependencies:
+  stage: install
+  script:
+    - cd client && npm install
+    - cd ../server && npm install
+  artifacts:
+    paths:
+      - client/node_modules/
+      - server/node_modules/
+
+build_client:
+  stage: build
+  script:
+    - cd client
+    - npm run build
+  artifacts:
+    paths:
+      - client/dist/
+
+deploy:
+  stage: deploy
+  script:
+    - echo "Deploying to production..."
+    # 这里添加您的部署命令
+  only:
+    - main  # 只在主分支上部署 

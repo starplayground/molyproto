@@ -28,8 +28,8 @@
 
 1. 克隆项目
 ```bash
-git clone [your-gitlab-repo-url]
-cd chat-ai-assistant
+git clone https://git.basevec.com/zhangxin/molyproto.git
+cd molyproto
 ```
 
 2. 安装依赖
@@ -77,19 +77,4 @@ npm run dev
 
 ## 许可证
 
-[MIT License](LICENSE) 
-
-# 初始化 git 仓库
-git init
-
-# 添加远程仓库
-git remote add origin [your-gitlab-repo-url]
-
-# 添加所有文件
-git add .
-
-# 提交更改
-git commit -m "Initial commit"
-
-# 推送到 GitLab
-git push -u origin main 
+[MIT License](LICENSE)

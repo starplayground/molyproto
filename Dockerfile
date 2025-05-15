@@ -8,10 +8,7 @@ COPY package-lock.json ./
 
 # 设置 npm 配置并安装依赖
 RUN npm config set registry https://registry.npmmirror.com/ && \
-    npm install -g pnpm && \
-    pnpm config set registry https://registry.npmmirror.com && \
-    pnpm config set strict-ssl false && \
-    pnpm install
+    npm install
 
 # 复制项目文件
 COPY . ./
@@ -27,4 +24,4 @@ RUN pnpm build
 EXPOSE 5003
 
 # 启动命令
-CMD ["npm" , "dev"]
+CMD ["npm" , "run", "dev"]

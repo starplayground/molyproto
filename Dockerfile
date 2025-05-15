@@ -18,7 +18,7 @@ ENV NODE_ENV=development
 ENV PORT=5003
 
 # 构建应用
-RUN npm build
+RUN npm run build
 
 # 暴露端口
 EXPOSE 5003

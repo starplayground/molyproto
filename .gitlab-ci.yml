@@ -1,38 +1,28 @@
-image: node:18
-
 stages:
-  - install
   - build
   - deploy
+variables:
+  NODE_ENV: development
+  DOCKER_IMAGE_NAME: "moly-prototype"
+  DOCKER_ORIGIN_PORT: "5003"
+  DOCKER_REMOTE_PORT: "5003"
 
 cache:
+  key: ${CI_COMMIT_REF_SLUG}
   paths:
     - node_modules/
-    - client/node_modules/
-
-install_dependencies:
-  stage: install
-  script:
-    - cd client && npm install
-    - cd ../server && npm install
-  artifacts:
-    paths:
-      - client/node_modules/
-      - server/node_modules/
 
 build_client:
   stage: build
   script:
-    - cd client
-    - npm run build
-  artifacts:
-    paths:
-      - client/dist/
+    - cd $CI_PROJECT_DIR
+    - docker build -t $DOCKER_IMAGE_NAME:latest .
+    - docker stop $DOCKER_IMAGE_NAME || true
+    - docker rm $DOCKER_IMAGE_NAME || true
 
 deploy:
   stage: deploy
   script:
-    - echo "Deploying to production..."
-    # 这里添加您的部署命令
+    - docker run --name $DOCKER_IMAGE_NAME -p $DOCKER_REMOTE_PORT:$DOCKER_ORIGIN_PORT -d $DOCKER_IMAGE_NAME:latest
   only:
-    - main  # 只在主分支上部署 
+    - main

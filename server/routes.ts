@@ -7,7 +7,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Chat API endpoint
   app.post("/api/chat", async (req, res) => {
     try {
-      const { message, messages, apiKey } = req.body;
+      const { message, messages, apiKey, modelId } = req.body;
       
       if (!message) {
         return res.status(400).json({ message: "Message is required" });
@@ -16,8 +16,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get conversation history or create a new one
       const conversationMessages = Array.isArray(messages) ? messages : [];
       
-      // Send message to OpenAI with user's API key
-      const response = await sendChatMessage(message, conversationMessages, apiKey);
+      // Send message to OpenAI with user's API key and selected model
+      const response = await sendChatMessage(message, conversationMessages, apiKey, modelId);
       
       return res.json(response);
     } catch (error) {
@@ -31,17 +31,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Summarize conversation endpoint
   app.post("/api/summarize", async (req, res) => {
     try {
-      const { messages, apiKey, generateTopicOnly, generateRefinedContent } = req.body;
+      const { messages, apiKey, modelId, generateTopicOnly, generateRefinedContent } = req.body;
       
       if (!Array.isArray(messages) || messages.length === 0) {
         return res.status(400).json({ message: "Valid messages array is required" });
       }
 
-      // Generate summary from conversation using user's API key
+      // Generate summary from conversation using user's API key and selected model
       const result = await summarizeConversation(
         messages, 
         apiKey, 
-        undefined, 
+        modelId,
         generateTopicOnly,
         generateRefinedContent
       );

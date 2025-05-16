@@ -124,88 +124,127 @@ function extractTopicFromContent(contentWords: string[], summary: string, messag
     // 产品与平台
     "小红书", "微信", "支付宝", "抖音", "淘宝", "京东", "拼多多", "知乎", "微博", "哔哩哔哩", "B站",
     "YouTube", "Facebook", "Twitter", "Instagram", "TikTok", "LinkedIn", "WhatsApp", "Telegram",
+    "GitHub", "GitLab", "Jira", "Confluence", "Slack", "Discord", "Teams", "Zoom", "Notion",
+    "Figma", "Sketch", "Adobe", "Photoshop", "Illustrator", "Premiere", "After Effects",
+    
+    "汽车","宝马", "奔驰", "奥迪", "丰田", "本田", "大众", "福特", "雪佛兰", "别克", "凯迪拉克", "林肯",
+    "保时捷", "法拉利", "兰博基尼", "玛莎拉蒂", "阿斯顿·马丁", "宾利", "劳斯莱斯", "迈巴赫", "布加迪",
+    "迈凯伦", "柯尼塞格", "帕加尼", "路特斯", "阿波罗", "迈凯伦", "柯尼塞格", "帕加尼", "路特斯",
+    "阿波罗", "迈凯伦", "柯尼塞格", "帕加尼", "路特斯", "阿波罗", "迈凯伦", "柯尼塞格", "帕加尼", "路特斯",
+
     // 技术与框架
     "React", "Vue", "Angular", "Next.js", "Nuxt.js", "Svelte", "Flutter", "SwiftUI", "Kotlin", 
-    "Spring Boot", "Django", "Laravel", "Express", "Nest.js", "FastAPI",
+    "Spring Boot", "Django", "Laravel", "Express", "Nest.js", "FastAPI", "Node.js", "TypeScript",
+    "Python", "Java", "Go", "Rust", "C\\+\\+", ".NET", "PHP", "Ruby", "Scala",
+    "Docker", "Kubernetes", "AWS", "Azure", "GCP", "Linux", "MySQL", "PostgreSQL", "MongoDB",
+    "Redis", "Elasticsearch", "Kafka", "RabbitMQ", "GraphQL", "REST", "gRPC", "WebSocket",
+    
     // 具体行业与领域
-    "电商", "金融", "教育", "医疗", "旅游", "餐饮", "物流", "房地产", "游戏", "音乐", "视频", "直播"
+    "电商", "金融", "教育", "医疗", "旅游", "餐饮", "物流", "房地产", "游戏", "音乐", "视频", "直播",
+    "AI", "区块链", "物联网", "云计算", "大数据", "机器学习", "深度学习", "计算机视觉", "自然语言处理",
+    "自动驾驶", "智能家居", "智慧城市", "智能制造", "智慧医疗", "智慧教育", "智慧零售",
+    
+    // 具体业务对象
+    "用户反馈", "产品需求", "功能设计", "界面原型", "交互流程", "用户体验", "性能优化", "代码重构",
+    "Bug修复", "系统架构", "数据模型", "API接口", "部署方案", "测试用例", "安全策略", "监控告警",
+    "运营方案", "推广策略", "数据分析", "用户画像", "竞品分析", "市场调研", "商业模式", "盈利方案",
+    
+    // 具体产品类型
+    "小程序", "APP", "网站", "后台", "中台", "前台", "移动端", "PC端", "H5", "Web应用",
+    "微服务", "分布式系统", "单页应用", "多端应用", "混合应用", "原生应用", "跨平台应用",
+    
+    // 具体技术组件
+    "组件库", "UI框架", "状态管理", "路由系统", "构建工具", "打包工具", "测试框架", "CI/CD",
+    "容器化", "服务网格", "负载均衡", "缓存系统", "消息队列", "搜索引擎", "数据库集群"
   ];
+
+  // 创建一个映射，将原始实体名映射到转义后的正则表达式模式
+  const entityPatterns = new Map(
+    specificEntities.map(entity => [
+      entity,
+      new RegExp(entity.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi')
+    ])
+  );
   
-  // 1. 优先统计对话内容中出现频率最高的特定实体名词
+  // 将 Map 转换为数组以便迭代
+  const entityPatternEntries = Array.from(entityPatterns.entries());
+  
+  // 通用词汇黑名单
+  const genericTerms = new Set([
+    "讨论", "分析", "会议", "总结", "报告", "评审", "交流", "主题", "开发", "设计", "测试",
+    "部署", "问题", "方案", "计划", "策略", "项目", "任务", "工作", "内容", "文档", "代码",
+    "系统", "平台", "产品", "服务", "功能", "需求", "目标", "结果", "进度", "质量", "风险"
+  ]);
+
+  // 1. 优先从对话内容中提取具体对象
   if (messages && messages.length > 0) {
     const entityCount: Record<string, number> = {};
+    const entityContext: Record<string, string[]> = {};
+    
     for (const msg of messages) {
-      for (const entity of specificEntities) {
-        const re = new RegExp(entity, 'gi');
-        const matches = msg.content.match(re);
+      // 检查消息中是否包含具体对象
+      for (const [entity, pattern] of entityPatternEntries) {
+        const matches = msg.content.match(pattern);
         if (matches) {
           entityCount[entity] = (entityCount[entity] || 0) + matches.length;
+          // 保存上下文
+          const context = msg.content.slice(
+            Math.max(0, msg.content.indexOf(entity) - 20),
+            Math.min(msg.content.length, msg.content.indexOf(entity) + entity.length + 20)
+          );
+          entityContext[entity] = entityContext[entity] || [];
+          entityContext[entity].push(context);
+        }
+      }
+      
+      // 检查消息中是否包含具体的产品、功能或技术名称
+      const productMatch = msg.content.match(/([A-Za-z0-9]+(?:[A-Z][a-z]+)+)/g);
+      if (productMatch) {
+        for (const product of productMatch) {
+          if (product.length >= 3 && !genericTerms.has(product.toLowerCase())) {
+            entityCount[product] = (entityCount[product] || 0) + 1;
+            const context = msg.content.slice(
+              Math.max(0, msg.content.indexOf(product) - 20),
+              Math.min(msg.content.length, msg.content.indexOf(product) + product.length + 20)
+            );
+            entityContext[product] = entityContext[product] || [];
+            entityContext[product].push(context);
+          }
         }
       }
     }
-    // 选出现次数最多的实体
-    const sorted = Object.entries(entityCount).sort((a, b) => b[1] - a[1]);
+    
+    // 根据出现频率和上下文相关性排序
+    const sorted = Object.entries(entityCount)
+      .filter(([entity]) => !genericTerms.has(entity.toLowerCase()))
+      .sort((a, b) => {
+        // 首先按出现频率排序
+        if (b[1] !== a[1]) return b[1] - a[1];
+        // 如果频率相同，优先选择有更多上下文的实体
+        const aContext = entityContext[a[0]]?.length || 0;
+        const bContext = entityContext[b[0]]?.length || 0;
+        return bContext - aContext;
+      });
+    
     if (sorted.length > 0) {
-      return sorted[0][0];
+      const [topEntity] = sorted[0];
+      // 验证提取的实体是否足够具体
+      if (!genericTerms.has(topEntity.toLowerCase()) && 
+          specificEntities.some(entity => entity.toLowerCase() === topEntity.toLowerCase())) {
+        return topEntity;
+      }
     }
   }
 
-  // 2. 原有摘要分析逻辑兜底
-  // 在整个摘要中查找特定实体
-  let detectedTopic = null;
-  for (const entity of specificEntities) {
-    if (summary.toLowerCase().includes(entity.toLowerCase())) {
-      detectedTopic = entity;
-      break;
+  // 2. 在摘要中查找具体对象
+  for (const [entity, pattern] of entityPatternEntries) {
+    if (pattern.test(summary) && !genericTerms.has(entity.toLowerCase())) {
+      return entity;
     }
   }
-  // 如果没有找到特定实体，尝试从单词中匹配
-  if (!detectedTopic) {
-    for (const word of contentWords) {
-      if (word.length < 2) continue;
-      const matchedEntity = specificEntities.find(entity => 
-        word.toLowerCase() === entity.toLowerCase()
-      );
-      if (matchedEntity) {
-        detectedTopic = matchedEntity;
-        break;
-      }
-    }
-  }
-  // 如果仍未找到，尝试匹配通用领域名词
-  if (!detectedTopic) {
-    const commonTopics = [
-      "前端", "后端", "数据库", "API", "UI", "UX", "设计", "架构", "算法", "框架",
-      "JavaScript", "TypeScript", "Python", "Java", "CSS", "HTML", "Node",
-      "产品", "需求", "功能", "项目", "计划", "报告", "分析", "测试", "问题", "解决方案",
-      "用户", "客户", "市场", "销售", "运营", "推广", "数据", "指标", "目标", "策略",
-      "会议", "讨论", "培训", "评审", "决策", "计划", "总结", "反馈", "建议", "改进"
-    ];
-    for (const word of contentWords) {
-      if (word.length < 2) continue;
-      const matchedTopic = commonTopics.find(topic => 
-        word.toLowerCase() === topic.toLowerCase() || 
-        summary.toLowerCase().includes(topic.toLowerCase())
-      );
-      if (matchedTopic) {
-        detectedTopic = matchedTopic;
-        break;
-      }
-    }
-  }
-  // 如果仍然没有找到匹配的名词，尝试提取长度大于2的非常见词汇
-  if (!detectedTopic) {
-    const stopWords = ["的", "是", "在", "了", "和", "与", "或", "但", "如果", "因为", "所以", 
-                       "我", "你", "他", "她", "它", "我们", "你们", "他们", "这个", "那个",
-                       "这些", "那些", "什么", "怎么", "为什么", "如何", "可以", "应该", "会"];
-    for (const word of contentWords) {
-      if (word.length >= 2 && !stopWords.includes(word)) {
-        detectedTopic = word;
-        break;
-      }
-    }
-  }
-  return detectedTopic || "对话";
+  
+  // 3. 如果没有找到具体对象，返回"项目"作为默认值
+  return "项目";
 }
 
 // 使用AI生成特定主题名词
@@ -222,7 +261,7 @@ async function generateTopicWithAI(summary: string, apiKey: string, messages?: M
       ? `\n\n当前对话内容:\n${messages.map(msg => `${msg.role}: ${msg.content}`).join('\n')}`
       : '';
     
-    const promptContent = `请为当前对话生成一个简短的主题标签，这个标签将显示在紫色标签中。
+    const promptContent = `请为当前对话生成一个精准的类型标签，这个标签将显示在紫色标签中。
 
 对话摘要:
 ${summary}
@@ -230,19 +269,55 @@ ${summary}
 主题描述:
 ${topicDescription}${conversationContext}
 
-要求:
-1. 只返回一个具体的名词或短语，不超过5个字
-2. 应该是对话中讨论的具体对象、产品、技术或概念
-3. 不能使用通用词汇（如"讨论"、"分析"、"会议"等）
-4. 不要有任何其他文字、解释或标点
-5. 标签内容要与当前对话内容直接相关，而不是所有笔记的内容`;
+类型标签提取要求：
+
+1. 核心逻辑框架
+   - 对象识别：提取对话中讨论的具体对象（如"宝马"、"React"、"微信"）
+   - 领域识别：确定对象所属的领域（如"汽车"、"技术"、"社交"）
+   - 层级关系：优先提取最具体的对象，而不是其属性或特点
+
+2. 多维度提取机制
+   - 词频统计：排除通用词，保留对象名称
+   - 语义网络分析：关联对象及其所属领域
+   - 时序权重：对话后期出现的新对象赋予更高优先级
+
+3. 类型分类标准
+   - 产品类：具体产品名称（如"宝马"、"iPhone"、"微信"）
+   - 平台类：具体平台名称（如"淘宝"、"抖音"、"GitHub"）
+   - 技术类：具体技术名称（如"React"、"Python"、"Docker"）
+   - 概念类：具体概念名称（如"区块链"、"AI"、"元宇宙"）
+
+4. 输出要求
+   - 只返回一个具体的对象名称，不超过3个字
+   - 严格禁止使用以下通用词汇：
+     * 讨论、分析、会议、总结、报告、主题
+     * 开发、设计、测试、部署
+     * 问题、方案、计划、策略
+     * 项目、任务、工作、内容
+     * 文档、代码、系统、平台
+     * 产品、服务、功能、需求
+   - 标签必须是对话中讨论的具体对象
+   - 不要有任何其他文字、解释或标点
+
+5. 特殊情况处理
+   - 跨语言混合：保留原词（如"PPT"、"API"）
+   - 专业术语：保持原样（如"React"、"Vue"）
+   - 新兴概念：使用最新术语（如"AI"、"区块链"）
+   - 如果无法提取具体对象，返回"项目"作为默认值
+
+示例：
+- 对话主题："宝马M3的特点和性能分析" -> 类型标签："宝马"
+- 对话主题："React组件开发最佳实践" -> 类型标签："React"
+- 对话主题："微信小程序开发教程" -> 类型标签："微信"
+- 对话主题："Python数据分析入门" -> 类型标签："Python"
+- 对话主题："讨论项目进度" -> 类型标签："项目"`;
 
     const response = await openai.chat.completions.create({
       model: DEFAULT_MODEL,
       messages: [
         {
           role: "system",
-          content: "你是一位专业的文档分析助手，擅长提取对话主题。请只返回一个简短的主题标签。"
+          content: "你是一位专业的文档分析助手，擅长提取对话中的具体对象作为类型标签。请只返回一个简短的类型标签，不要使用任何通用词汇。如果无法提取具体对象，返回'项目'。"
         },
         {
           role: "user",
@@ -254,47 +329,18 @@ ${topicDescription}${conversationContext}
     });
 
     const generatedTopic = response.choices[0].message.content?.trim() || "项目";
-    console.log('AI生成的主题标签:', generatedTopic);
+    console.log('AI生成的类型标签:', generatedTopic);
     
     // 检查生成的主题是否为通用词汇
-    const genericTopics = ["对话", "讨论", "会议", "分析", "总结", "报告", "评审", "交流", "主题"];
-    if (genericTopics.includes(generatedTopic)) {
-      // 再次尝试生成更具体的主题
-      const retryPrompt = `请重新为当前对话生成一个具体的主题标签:
-
-对话摘要:
-${summary}${conversationContext}
-
-要求:
-1. 不要使用"${generatedTopic}"或任何通用词汇
-2. 必须是具体的产品名、技术名、项目名或业务名
-3. 只返回一个单词或短语，没有任何解释
-4. 标签必须与当前对话直接相关`;
-
-      const retryResponse = await openai.chat.completions.create({
-        model: DEFAULT_MODEL,
-        messages: [
-          {
-            role: "system",
-            content: "你是一位专业的文档分析助手，擅长提取对话核心主题。请只返回一个简短的主题标签。"
-          },
-          {
-            role: "user",
-            content: retryPrompt
-          }
-        ],
-        temperature: 0.5,
-        max_tokens: 20,
-      });
-      
-      const retryTopic = retryResponse.choices[0].message.content?.trim() || "项目";
-      console.log('AI重试生成的主题标签:', retryTopic);
-      
-      if (!genericTopics.includes(retryTopic)) {
-        return retryTopic;
-      }
-      
-      return "项目";  // 如果仍然无法生成具体主题，使用"项目"作为默认
+    const genericTopics = new Set([
+      "对话", "讨论", "会议", "分析", "总结", "报告", "评审", "交流", "主题",
+      "开发", "设计", "测试", "部署", "问题", "方案", "计划", "策略",
+      "项目", "任务", "工作", "内容", "文档", "代码", "系统", "平台",
+      "产品", "服务", "功能", "需求", "目标", "结果", "进度", "质量", "风险"
+    ]);
+    
+    if (genericTopics.has(generatedTopic.toLowerCase())) {
+      return "项目";  // 如果生成的是通用词汇，直接返回"项目"
     }
     
     return generatedTopic;
@@ -309,8 +355,9 @@ export async function summarizeConversation(
   messages: Message[],
   apiKey?: string,
   model: string = DEFAULT_MODEL,
-  generateTopicOnly: boolean = false
-): Promise<string> {
+  generateTopicOnly: boolean = false,
+  generateRefinedContent: boolean = false
+): Promise<{ summary: string; refinedContent?: string }> {
   try {
     // Use API key provided by user, or fall back to environment variable
     const key = apiKey || process.env.OPENAI_API_KEY || "";
@@ -343,7 +390,7 @@ ${messages.map(msg => `${msg.role}: ${msg.content}`).join('\n')}
         max_tokens: 20,
       });
 
-      return topicResponse.choices[0].message.content?.trim() || "项目";
+      return { summary: topicResponse.choices[0].message.content?.trim() || "项目" };
     }
 
     // 生成完整摘要
@@ -371,7 +418,40 @@ ${messages.map(msg => `${msg.role}: ${msg.content}`).join('\n')}
     // 处理并修正主题标签，使用AI辅助生成主题
     const result = await processTopicTagsWithAI(summary, key, messages);
     console.log('格式化后的摘要:', result);
-    return result;
+
+    // 如果需要生成精炼内容
+    let refinedContent: string | undefined;
+    if (generateRefinedContent) {
+      const refinedResponse = await openai.chat.completions.create({
+        model: model,
+        messages: [
+          {
+            role: "system",
+            content: "你是一位专业的文档分析助手，擅长提炼对话要点。请将对话内容精炼成不超过10个字的简短总结。"
+          },
+          {
+            role: "user",
+            content: `请将以下对话内容精炼成不超过10个字的简短总结：
+
+${messages.map(msg => `${msg.role}: ${msg.content}`).join('\n')}
+
+要求：
+1. 总结必须不超过10个字
+2. 要准确反映对话的核心内容
+3. 使用简洁明了的语言
+4. 不要包含任何标点符号
+5. 不要添加任何解释或额外内容`
+          }
+        ],
+        temperature: 0.3,
+        max_tokens: 20,
+      });
+
+      refinedContent = refinedResponse.choices[0].message.content?.trim();
+      console.log('生成的精炼内容:', refinedContent);
+    }
+
+    return { summary: result, refinedContent };
   } catch (error) {
     console.error("Error summarizing conversation:", error);
     throw new Error(`Failed to summarize conversation: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -428,15 +508,27 @@ export async function sendChatMessage(
       };
     }
 
-    // Generate summary for the current exchange
-    const currentExchange: Message[] = [
-      ...conversationHistory.slice(-2), // Get last exchange
-      { role: "user" as const, content: message },
-      { role: "assistant" as const, content: assistantResponse }
-    ];
+    // 只使用当前消息生成摘要
+    const currentMessage: Message = { role: "user", content: message };
+    const currentResponse: Message = { role: "assistant", content: assistantResponse };
 
     // 生成提示词
-    const analysisPrompt = getTopicAnalysisPrompt(currentExchange);
+    const analysisPrompt = `请分析以下对话，提炼关键信息：
+
+用户: ${currentMessage.content}
+助手: ${currentResponse.content}
+
+请根据对话内容输出结构化总结，包含以下几点：
+1. 对话主题：描述本次对话的主题，用一句话概括对话的核心内容
+2. 关键要点：提炼2-3个对话中的关键信息点
+3. 重要细节：记录任何重要的细节信息，如时间、数量等
+4. 结论或决定：总结对话达成的结论或决定
+
+请确保：
+- 所有内容必须来自该对话本身，禁止虚构
+- 特别注意提炼细节性信息
+- 语言简洁明了、专业可靠
+- "对话主题"应该是一个完整的句子，描述对话的核心内容`;
 
     const analysisResponse = await openai.chat.completions.create({
       model: model,
@@ -457,8 +549,8 @@ export async function sendChatMessage(
     const refinedSummary = analysisResponse.choices[0].message.content || "无法生成摘要";
     console.log('Chat生成的原始摘要:', refinedSummary);
     
-    // 处理并修正主题标签，使用AI辅助生成主题，传入当前对话信息
-    const processedSummary = await processTopicTagsWithAI(refinedSummary, key, currentExchange);
+    // 处理并修正主题标签，使用AI辅助生成主题，只传入当前消息
+    const processedSummary = await processTopicTagsWithAI(refinedSummary, key, [currentMessage, currentResponse]);
     console.log('Chat处理后的摘要:', processedSummary);
 
     // Return assistant's response and refined summary separately

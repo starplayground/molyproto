@@ -31,16 +31,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Summarize conversation endpoint
   app.post("/api/summarize", async (req, res) => {
     try {
-      const { messages, apiKey, generateTopicOnly } = req.body;
+      const { messages, apiKey, generateTopicOnly, generateRefinedContent } = req.body;
       
       if (!Array.isArray(messages) || messages.length === 0) {
         return res.status(400).json({ message: "Valid messages array is required" });
       }
 
       // Generate summary from conversation using user's API key
-      const summary = await summarizeConversation(messages, apiKey, undefined, generateTopicOnly);
+      const result = await summarizeConversation(
+        messages, 
+        apiKey, 
+        undefined, 
+        generateTopicOnly,
+        generateRefinedContent
+      );
       
-      return res.json({ summary });
+      return res.json(result);
     } catch (error) {
       console.error("Error in summarize endpoint:", error);
       return res.status(500).json({ 

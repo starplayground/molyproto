@@ -419,10 +419,31 @@ const SummaryPanel: React.FC = () => {
 
   // 关闭标签
   const handleCloseType = (type: string) => {
+    // 从 activeTypes 中移除该类型
     const newTypes = activeTypes.filter(t => t !== type);
     setActiveTypes(newTypes);
+    
+    // 如果当前选中的类型是要关闭的类型，则切换到其他类型
     if (selectedType === type) {
       setSelectedType(newTypes.length > 0 ? newTypes[0] : "");
+    }
+
+    // 从 summary 中删除该类型的所有笔记
+    if (summary) {
+      const notes = summary.split('\n\n---\n\n');
+      const filteredNotes = notes.filter(note => {
+        const tagMatch = note.match(/^【(.+?)】/);
+        const noteTag = tagMatch ? tagMatch[1] : '未分类';
+        return noteTag !== type;
+      });
+      const newSummary = filteredNotes.join('\n\n---\n\n');
+      setSummary(newSummary);
+
+      // 更新当前对话的 summary
+      updateCurrentConversation(conv => ({
+        ...conv,
+        summary: newSummary
+      }));
     }
   };
 

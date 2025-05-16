@@ -22,6 +22,7 @@ interface ChatContextProps {
   showSidebar: boolean;
   showNotePrompt: boolean;
   tempSummary: string | null;
+  refinedNoteContent: string | null;
   showModelSelectModal: boolean;
   selectedModelId: string;
   setShowSidebar: (show: boolean) => void;
@@ -32,6 +33,7 @@ interface ChatContextProps {
   setSelectedModelId: (modelId: string) => void;
   setApiKey: (key: string) => void;
   setSummary: (summary: string | null) => void;
+  setRefinedNoteContent: (content: string | null) => void;
   sendMessage: (content: string) => Promise<void>;
   newConversation: () => void;
   selectConversation: (id: string) => void;
@@ -57,6 +59,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [showSidebar, setShowSidebar] = useState(true);
   const [showNotePrompt, setShowNotePrompt] = useState(false);
   const [tempSummary, setTempSummary] = useState<string | null>(null);
+  const [refinedNoteContent, setRefinedNoteContent] = useState<string | null>(null);
   const [showModelSelectModal, setShowModelSelectModal] = useState(false);
   const [selectedModelId, setSelectedModelId] = useState("gpt-3.5-turbo");
   const { toast } = useToast();
@@ -233,6 +236,10 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setConversations(prev => [newConv, ...prev]);
     setCurrentConversationId(newId);
     setMessages([]);
+    setSummary(null);
+    setTempSummary(null);
+    setRefinedNoteContent(null);
+    setShowNotePrompt(false);
   };
   
   const newConversation = useCallback(() => {
@@ -351,12 +358,13 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setSummarizing(true);
 
     try {
-      // 生成摘要
+      // 生成摘要和精炼内容
       const response = await apiRequest("POST", "/api/summarize", {
         messages: messages.filter(msg => msg.role !== "notePrompt"),
         assistantResponse,
         apiKey: apiKey,
         generateTopicOnly: false, // 生成完整摘要而不仅仅是主题标签
+        generateRefinedContent: true, // 请求生成精炼内容
       });
 
       const data = await response.json();
@@ -364,6 +372,14 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (data.summary) {
         // 设置临时摘要
         setTempSummary(data.summary);
+        
+        // 如果有精炼内容，设置它
+        if (data.refinedContent) {
+          const tagMatch = data.summary.match(/【(.+?)】/);
+          const tag = tagMatch ? tagMatch[1] : "";
+          setRefinedNoteContent(`【${tag}】\n${data.refinedContent}`);
+        }
+        
         // 显示笔记提示
         setShowNotePrompt(true);
       }
@@ -384,12 +400,16 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (currentConversationId && tempSummary) {
       console.log('Adding note to existing summary', {
         existingSummary: summary,
-        newNote: tempSummary
+        newNote: tempSummary,
+        refinedContent: refinedNoteContent
       });
+      
+      // 始终使用原始摘要
+      const noteContent = tempSummary;
       
       // 更新对话中的摘要
       updateCurrentConversation(conv => {
-        const updatedSummary = appendToSummary(conv.summary, tempSummary);
+        const updatedSummary = appendToSummary(conv.summary, noteContent);
         console.log('Updated conversation summary:', updatedSummary);
         return { 
           ...conv, 
@@ -399,7 +419,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       // 更新当前摘要
       setSummary(prev => {
-        const updatedSummary = appendToSummary(prev, tempSummary);
+        const updatedSummary = appendToSummary(prev, noteContent);
         console.log('Updated current summary:', updatedSummary);
         return updatedSummary;
       });
@@ -407,6 +427,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // 清除临时状态
       setShowNotePrompt(false);
       setTempSummary(null);
+      setRefinedNoteContent(null);
     }
   }, [currentConversationId, tempSummary, summary, appendToSummary, updateCurrentConversation]);
 
@@ -414,6 +435,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const skipNote = useCallback(() => {
     setShowNotePrompt(false);
     setTempSummary(null);
+    setRefinedNoteContent(null);
   }, []);
 
   // Remove a notePrompt message from the chat and its corresponding note
@@ -452,6 +474,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     showSidebar,
     showNotePrompt,
     tempSummary,
+    refinedNoteContent,
     showModelSelectModal,
     selectedModelId,
     setShowSidebar,
@@ -462,6 +485,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setSelectedModelId,
     setApiKey,
     setSummary,
+    setRefinedNoteContent,
     sendMessage: handleSendMessage,
     newConversation,
     selectConversation,

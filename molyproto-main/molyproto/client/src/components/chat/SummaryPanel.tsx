@@ -122,15 +122,46 @@ const SummaryPanel: React.FC = () => {
   const handleNoteSave = () => {
     if (editingNote && summary) {
       const notes = summary.split('\n\n---\n\n');
-      const updatedNotes = notes.map(note => 
-        note === editingNote ? editValue : note
-      );
+
+      // 从正在编辑的笔记中提取标签，以便在原始摘要中定位相应笔记
+      const tagMatch = editingNote.match(/^【(.+?)】/);
+      const tag = tagMatch ? tagMatch[1] : null;
+
+      let updatedNotes: string[] = [];
+      if (tag) {
+        // 找到标签相同的所有笔记，并用编辑后的内容替换它们
+        let replaced = false;
+        for (let i = 0; i < notes.length; i++) {
+          const current = notes[i];
+          const currentTagMatch = current.match(/^【(.+?)】/);
+          const currentTag = currentTagMatch ? currentTagMatch[1] : null;
+          if (!replaced && currentTag === tag) {
+            // 插入编辑后的笔记并跳过同标签的其他笔记
+            updatedNotes.push(editValue);
+            replaced = true;
+            // 跳过后续同标签笔记
+            while (i < notes.length && (notes[i].match(/^【(.+?)】/)?[1]:null) === tag) {
+              i++;
+            }
+            i--; // 因為for迴圈還會自增
+          } else {
+            updatedNotes.push(current);
+          }
+        }
+        if (!replaced) {
+          // 如果没找到匹配的标签，退回到简单替换
+          updatedNotes = notes.map(note => note === editingNote ? editValue : note);
+        }
+      } else {
+        // 无标签的笔记，按内容匹配替换
+        updatedNotes = notes.map(note => note === editingNote ? editValue : note);
+      }
+
       const newSummary = updatedNotes.join('\n\n---\n\n');
-      
-      // Update both the local state and the context
+
+      // 更新本地状态和对话内容
       setSummary(newSummary);
-      
-      // Update the conversation's summary in the context
+
       if (currentConversationId) {
         updateCurrentConversation((conv: Conversation) => ({
           ...conv,
@@ -138,7 +169,7 @@ const SummaryPanel: React.FC = () => {
           lastActive: new Date()
         }));
       }
-      
+
       setEditingNote(null);
     }
   };

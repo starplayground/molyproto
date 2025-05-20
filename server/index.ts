@@ -63,15 +63,15 @@ app.use((req, res, next) => {
   // ALWAYS serve the app on port 5000
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
-  const port = 5003
-  server.listen(
-    {
-      port,
-      host: "0.0.0.0",
-      reusePort: true,
-    },
-    () => {
-      log(`serving on port ${port}`)
-    },
-  )
+  const port = 5000
+  server.listen(port, () => {
+    log(`服务器已启动，正在监听端口 ${port}`)
+  }).on('error', (err: NodeJS.ErrnoException) => {
+    if (err.code === 'EADDRINUSE') {
+      log(`错误：端口 ${port} 已被占用，请尝试使用其他端口或关闭占用该端口的程序`)
+    } else {
+      log(`服务器启动错误：${err.message}`)
+    }
+    process.exit(1)
+  })
 })()

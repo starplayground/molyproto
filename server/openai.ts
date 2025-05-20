@@ -139,6 +139,7 @@ function extractTopicFromContent(contentWords: string[], summary: string, messag
     "GitHub", "GitLab", "Jira", "Confluence", "Slack", "Discord", "Teams", "Zoom", "Notion",
     "Figma", "Sketch", "Adobe", "Photoshop", "Illustrator", "Premiere", "After Effects","chatgpt", 
     "openai", "gpt", "Claude", "Gemini", "Bard", "Gemini", "Claude", "Bard","gpt-4", "gpt-3.5-turbo",
+    "Codex",
 
     
     "汽车","宝马", "奔驰", "奥迪", "丰田", "本田", "大众", "福特", "雪佛兰", "别克", "凯迪拉克", "林肯",
@@ -165,7 +166,8 @@ function extractTopicFromContent(contentWords: string[], summary: string, messag
     
     // 具体产品类型
     "小程序", "APP", "网站", "后台", "中台", "前台", "移动端", "PC端", "H5", "Web应用",
-    "微服务", "分布式系统", "单页应用", "多端应用", "混合应用", "原生应用", "跨平台应用",
+    "微服务", "分布式系统", "单页应用", "多端应用", "混合应用", "原生应用", "跨平台应用","功能开发文档",
+    "项目开发文档","产品调研",
     
     // 具体技术组件
     "组件库", "UI框架", "状态管理", "路由系统", "构建工具", "打包工具", "测试框架", "CI/CD",
@@ -338,7 +340,8 @@ ${recentMessages}${conversationContext}
 - 对话主题："React组件开发最佳实践" -> 类型标签："React"
 - 对话主题："微信小程序开发教程" -> 类型标签："微信"
 - 对话主题："Python数据分析入门" -> 类型标签："Python"
-- 对话主题："讨论项目进度" -> 类型标签："项目"`;
+- 对话主题："讨论项目进度" -> 类型标签："项目"
+- 对话主题："介绍一下codex" -> 类型标签："Codex"`;
 
     const response = await openai.chat.completions.create({
       model: DEFAULT_MODEL,

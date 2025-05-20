@@ -121,22 +121,61 @@ const SummaryPanel: React.FC = () => {
 
   const handleNoteSave = () => {
     if (editingNote && summary) {
+      console.log('保存笔记:', {
+        editingNote: editingNote.substring(0, 50) + '...',
+        editValue: editValue.substring(0, 50) + '...'
+      });
+
+      // 提取原始笔记的标签和时间戳
+      const tagMatch = editingNote.match(/^【(.+?)】/);
+      const timestampMatch = editingNote.match(/【(.+?)】\n\*(.+?)\*/);
+      const tag = tagMatch ? tagMatch[1] : null;
+      const timestamp = timestampMatch ? timestampMatch[2] : null;
+
+      // 检查编辑后的内容是否已经包含标签和时间戳
+      const hasTag = editValue.startsWith(`【${tag}】`);
+      const hasTimestamp = editValue.includes(`*${timestamp}*`);
+
+      // 构建新的笔记内容
+      let newNoteContent = editValue;
+      if (tag && !hasTag) {
+        // 只在没有标签时添加标签
+        newNoteContent = `【${tag}】${timestamp && !hasTimestamp ? `\n*${timestamp}*` : ''}\n\n${editValue}`;
+      }
+
+      // 分割所有笔记
       const notes = summary.split('\n\n---\n\n');
-      const updatedNotes = notes.map(note => 
-        note === editingNote ? editValue : note
-      );
-      const newSummary = updatedNotes.join('\n\n---\n\n');
-      
-      // Update both the local state and the context
-      setSummary(newSummary);
-      
-      // Update the conversation's summary in the context
-      if (currentConversationId) {
-        updateCurrentConversation((conv: Conversation) => ({
-          ...conv,
-          summary: newSummary,
-          lastActive: new Date()
-        }));
+      console.log('分割后的笔记数量:', notes.length);
+
+      // 查找要编辑的笔记
+      const noteIndex = notes.findIndex(note => {
+        // 通过标签匹配笔记
+        const noteTag = note.match(/^【(.+?)】/)?.[1];
+        return noteTag === tag;
+      });
+
+      console.log('找到的笔记索引:', noteIndex);
+
+      if (noteIndex !== -1) {
+        // 更新笔记
+        notes[noteIndex] = newNoteContent;
+        const newSummary = notes.join('\n\n---\n\n');
+        
+        // 更新状态
+        setSummary(newSummary);
+        
+        // 更新对话的summary
+        if (currentConversationId) {
+          updateCurrentConversation((conv: Conversation) => ({
+            ...conv,
+            summary: newSummary,
+            lastActive: new Date()
+          }));
+        }
+        
+        console.log('笔记已更新');
+      } else {
+        console.log('未找到要编辑的笔记');
       }
       
       setEditingNote(null);

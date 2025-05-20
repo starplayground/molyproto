@@ -48,26 +48,35 @@ const SummaryPanel: React.FC = () => {
         return groupNotes[0];
       }
 
-      // Merge multiple notes of the same type
-      const mergedContent = groupNotes.map((note, index) => {
+      // Expand already merged notes so numbering stays correct when new notes are added
+      const contents: string[] = [];
+      for (const note of groupNotes) {
         // Remove the tag and timestamp from the note content
         let content = note.replace(/^【.+?】\n\*(.+?)\*/, '').replace(/^【.+?】/, '').trim();
-        
+
+        if (/^##\s/.test(content)) {
+          // Split existing sections and strip the headings
+          const sections = content.split(/\n(?=##\s)/);
+          sections.forEach(sec => {
+            const clean = sec.replace(/^##\s*[^\n]+\n/, '').trim();
+            contents.push(clean);
+          });
+        } else {
+          contents.push(content);
+        }
+      }
+
+      const mergedContent = contents.map((item, index) => {
         // Handle Markdown headers
-        content = content.replace(/^(#{1,6})\s(.+)$/gm, (match, hashes, title) => {
-          // Keep original header format
-          return `${hashes} ${title}`;
-        });
+        let content = item.replace(/^(#{1,6})\s(.+)$/gm, (match, hashes, title) => `${hashes} ${title}`);
 
         // If no headers found, add numeric prefix
         if (!content.match(/^(#{1,6})\s/)) {
-          // Only add numeric prefix if the content doesn't start with a number
           if (!content.match(/^\d+\./)) {
             content = `${index + 1}. ${content}`;
           }
         }
 
-        // Add Chinese numeral as section divider with level 2 header
         return `## ${toChineseNumeral(index + 1)}、\n${content}`;
       }).join('\n\n');
 

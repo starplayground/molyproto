@@ -7,6 +7,23 @@ import { useToast } from "@/hooks/use-toast";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Conversation } from "@/lib/types";
+import type { Components } from 'react-markdown';
+
+// 定义 Markdown 组件的类型
+const markdownComponents: Components = {
+  p: ({ children }: { children: React.ReactNode }) => <p className="mb-2">{children}</p>,
+  ul: ({ children }: { children: React.ReactNode }) => <ul className="list-disc pl-4 mb-2">{children}</ul>,
+  ol: ({ children }: { children: React.ReactNode }) => <ol className="list-decimal pl-4 mb-2">{children}</ol>,
+  li: ({ children }: { children: React.ReactNode }) => <li className="mb-1">{children}</li>,
+  code: ({ children }: { children: React.ReactNode }) => <code className="bg-gray-100 px-1 rounded">{children}</code>,
+  pre: ({ children }: { children: React.ReactNode }) => <pre className="bg-gray-100 p-2 rounded mb-2 overflow-x-auto">{children}</pre>,
+  h1: ({ children }: { children: React.ReactNode }) => <h1 className="text-2xl font-bold mt-4 mb-2">{children}</h1>,
+  h2: ({ children }: { children: React.ReactNode }) => <h2 className="text-xl font-bold mt-3 mb-2">{children}</h2>,
+  h3: ({ children }: { children: React.ReactNode }) => <h3 className="text-lg font-bold mt-3 mb-2">{children}</h3>,
+  h4: ({ children }: { children: React.ReactNode }) => <h4 className="text-base font-bold mt-2 mb-1">{children}</h4>,
+  h5: ({ children }: { children: React.ReactNode }) => <h5 className="text-sm font-bold mt-2 mb-1">{children}</h5>,
+  h6: ({ children }: { children: React.ReactNode }) => <h6 className="text-xs font-bold mt-2 mb-1">{children}</h6>
+};
 
 const SummaryPanel: React.FC = () => {
   const { summary, setSummary, showNotePrompt, tempSummary, addToNotes, skipNote, currentConversationId, updateCurrentConversation } = useChatContext();
@@ -48,26 +65,35 @@ const SummaryPanel: React.FC = () => {
         return groupNotes[0];
       }
 
-      // Merge multiple notes of the same type
-      const mergedContent = groupNotes.map((note, index) => {
+      // Expand already merged notes so numbering stays correct when new notes are added
+      const contents: string[] = [];
+      for (const note of groupNotes) {
         // Remove the tag and timestamp from the note content
         let content = note.replace(/^【.+?】\n\*(.+?)\*/, '').replace(/^【.+?】/, '').trim();
-        
+
+        if (/^##\s/.test(content)) {
+          // Split existing sections and strip the headings
+          const sections = content.split(/\n(?=##\s)/);
+          sections.forEach(sec => {
+            const clean = sec.replace(/^##\s*[^\n]+\n/, '').trim();
+            contents.push(clean);
+          });
+        } else {
+          contents.push(content);
+        }
+      }
+
+      const mergedContent = contents.map((item, index) => {
         // Handle Markdown headers
-        content = content.replace(/^(#{1,6})\s(.+)$/gm, (match, hashes, title) => {
-          // Keep original header format
-          return `${hashes} ${title}`;
-        });
+        let content = item.replace(/^(#{1,6})\s(.+)$/gm, (match, hashes, title) => `${hashes} ${title}`);
 
         // If no headers found, add numeric prefix
         if (!content.match(/^(#{1,6})\s/)) {
-          // Only add numeric prefix if the content doesn't start with a number
           if (!content.match(/^\d+\./)) {
             content = `${index + 1}. ${content}`;
           }
         }
 
-        // Add Chinese numeral as section divider with level 2 header
         return `## ${toChineseNumeral(index + 1)}、\n${content}`;
       }).join('\n\n');
 
@@ -122,15 +148,49 @@ const SummaryPanel: React.FC = () => {
   const handleNoteSave = () => {
     if (editingNote && summary) {
       const notes = summary.split('\n\n---\n\n');
-      const updatedNotes = notes.map(note => 
-        note === editingNote ? editValue : note
-      );
+
+      // 从正在编辑的笔记中提取标签，以便在原始摘要中定位相应笔记
+      const tagMatch = editingNote.match(/^【(.+?)】/);
+      const tag = tagMatch ? tagMatch[1] : null;
+
+      let updatedNotes: string[] = [];
+      if (tag) {
+        // 找到标签相同的所有笔记，并用编辑后的内容替换它们
+        let replaced = false;
+        for (let i = 0; i < notes.length; i++) {
+          const current = notes[i];
+          const currentTagMatch = current.match(/^【(.+?)】/);
+          const currentTag = currentTagMatch ? currentTagMatch[1] : null;
+          if (!replaced && currentTag === tag) {
+            // 插入编辑后的笔记并跳过同标签的其他笔记
+            updatedNotes.push(editValue);
+            replaced = true;
+            // 跳过后续同标签笔记
+            while (i < notes.length) {
+              const nextTagMatch = notes[i].match(/^【(.+?)】/);
+              const nextTag = nextTagMatch ? nextTagMatch[1] : null;
+              if (nextTag !== tag) break;
+              i++;
+            }
+            i--; // 因為for迴圈還會自增
+          } else {
+            updatedNotes.push(current);
+          }
+        }
+        if (!replaced) {
+          // 如果没找到匹配的标签，退回到简单替换
+          updatedNotes = notes.map(note => note === editingNote ? editValue : note);
+        }
+      } else {
+        // 无标签的笔记，按内容匹配替换
+        updatedNotes = notes.map(note => note === editingNote ? editValue : note);
+      }
+
       const newSummary = updatedNotes.join('\n\n---\n\n');
-      
-      // Update both the local state and the context
+
+      // 更新本地状态和对话内容
       setSummary(newSummary);
-      
-      // Update the conversation's summary in the context
+
       if (currentConversationId) {
         updateCurrentConversation((conv: Conversation) => ({
           ...conv,
@@ -138,7 +198,7 @@ const SummaryPanel: React.FC = () => {
           lastActive: new Date()
         }));
       }
-      
+
       setEditingNote(null);
     }
   };
@@ -326,20 +386,7 @@ const SummaryPanel: React.FC = () => {
         <div className="p-5 text-gray-800 text-[15px] leading-relaxed">
           <ReactMarkdown 
             remarkPlugins={[remarkGfm]}
-            components={{
-              p: ({ children }) => <p className="mb-2">{children}</p>,
-              ul: ({ children }) => <ul className="list-disc pl-4 mb-2">{children}</ul>,
-              ol: ({ children }) => <ol className="list-decimal pl-4 mb-2">{children}</ol>,
-              li: ({ children }) => <li className="mb-1">{children}</li>,
-              code: ({ children }) => <code className="bg-gray-100 px-1 rounded">{children}</code>,
-              pre: ({ children }) => <pre className="bg-gray-100 p-2 rounded mb-2 overflow-x-auto">{children}</pre>,
-              h1: ({ children }) => <h1 className="text-2xl font-bold mt-4 mb-2">{children}</h1>,
-              h2: ({ children }) => <h2 className="text-xl font-bold mt-3 mb-2">{children}</h2>,
-              h3: ({ children }) => <h3 className="text-lg font-bold mt-3 mb-2">{children}</h3>,
-              h4: ({ children }) => <h4 className="text-base font-bold mt-2 mb-1">{children}</h4>,
-              h5: ({ children }) => <h5 className="text-sm font-bold mt-2 mb-1">{children}</h5>,
-              h6: ({ children }) => <h6 className="text-xs font-bold mt-2 mb-1">{children}</h6>
-            }}
+            components={markdownComponents}
           >
             {formattedNote}
           </ReactMarkdown>

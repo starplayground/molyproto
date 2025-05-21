@@ -48,27 +48,21 @@ const SummaryPanel: React.FC = () => {
         return groupNotes[0];
       }
 
-      // Expand already merged notes so numbering stays correct when new notes are added
-      const contents: string[] = [];
-      for (const note of groupNotes) {
+      // Merge multiple notes of the same type
+      const mergedContent = groupNotes.map((note, index) => {
         // Remove the tag and timestamp from the note content
-        let content = note.replace(/^【.+?】\n\*(.+?)\*/, '').replace(/^【.+?】/, '').trim();
+        let content = note
+          .replace(/^【.+?】\n\*(.+?)\*/, '')
+          .replace(/^【.+?】/, '')
+          .trim();
 
-        if (/^##\s/.test(content)) {
-          // Split existing sections and strip the headings
-          const sections = content.split(/\n(?=##\s)/);
-          sections.forEach(sec => {
-            const clean = sec.replace(/^##\s*[^\n]+\n/, '').trim();
-            contents.push(clean);
-          });
-        } else {
-          contents.push(content);
-        }
-      }
-
-      const mergedContent = contents.map((item, index) => {
+        // Strip existing numbering like "## 一、" or "1." to avoid nested numbers
+        content = content
+          .replace(/^#{1,6}\s*[一二三四五六七八九十]+、?\s*\n?/, '')
+          .replace(/^\d+[\.、]\s*/, '');
+        
         // Handle Markdown headers
-        let content = item.replace(/^(#{1,6})\s(.+)$/gm, (match, hashes, title) => `${hashes} ${title}`);
+        content = content.replace(/^(#{1,6})\s(.+)$/gm, (match, hashes, title) => `${hashes} ${title}`);
 
         // If no headers found, add numeric prefix
         if (!content.match(/^(#{1,6})\s/)) {
@@ -132,40 +126,14 @@ const SummaryPanel: React.FC = () => {
     if (editingNote && summary) {
       const notes = summary.split('\n\n---\n\n');
 
-      // 从正在编辑的笔记中提取标签，以便在原始摘要中定位相应笔记
-      const tagMatch = editingNote.match(/^【(.+?)】/);
-      const tag = tagMatch ? tagMatch[1] : null;
+      // Remove numbering prefixes before saving the edited note
+      const processedValue = editValue
+        .replace(/^#{1,6}\s*[一二三四五六七八九十]+、?\s*\n?/, '')
+        .replace(/^\d+[\.、]\s*/, '');
 
-      let updatedNotes: string[] = [];
-      if (tag) {
-        // 找到标签相同的所有笔记，并用编辑后的内容替换它们
-        let replaced = false;
-        for (let i = 0; i < notes.length; i++) {
-          const current = notes[i];
-          const currentTagMatch = current.match(/^【(.+?)】/);
-          const currentTag = currentTagMatch ? currentTagMatch[1] : null;
-          if (!replaced && currentTag === tag) {
-            // 插入编辑后的笔记并跳过同标签的其他笔记
-            updatedNotes.push(editValue);
-            replaced = true;
-            // 跳过后续同标签笔记
-            while (i < notes.length && (notes[i].match(/^【(.+?)】/)?.[1] || null) === tag) {
-              i++;
-            }
-            i--; // 因为for循环还会自增
-          } else {
-            updatedNotes.push(current);
-          }
-        }
-        if (!replaced) {
-          // 如果没找到匹配的标签，退回到简单替换
-          updatedNotes = notes.map(note => note === editingNote ? editValue : note);
-        }
-      } else {
-        // 无标签的笔记，按内容匹配替换
-        updatedNotes = notes.map(note => note === editingNote ? editValue : note);
-      }
-
+      const updatedNotes = notes.map(note =>
+        note === editingNote ? processedValue : note
+      );
       const newSummary = updatedNotes.join('\n\n---\n\n');
 
       // 更新本地状态和对话内容

@@ -33,6 +33,11 @@ const AVAILABLE_MODELS: Model[] = [
     name: "GPT-4 Turbo",
     description: "Latest GPT-4 model with improved performance",
   },
+  {
+    id: "o3",
+    name: "O3",
+    description: "Powerful O3 model",
+  },
 ];
 
 const ModelSelectModal: React.FC<ModelSelectModalProps> = ({

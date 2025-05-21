@@ -51,7 +51,15 @@ const SummaryPanel: React.FC = () => {
       // Merge multiple notes of the same type
       const mergedContent = groupNotes.map((note, index) => {
         // Remove the tag and timestamp from the note content
-        let content = note.replace(/^【.+?】\n\*(.+?)\*/, '').replace(/^【.+?】/, '').trim();
+        let content = note
+          .replace(/^【.+?】\n\*(.+?)\*/, '')
+          .replace(/^【.+?】/, '')
+          .trim();
+
+        // Strip existing numbering like "## 一、" or "1." to avoid nested numbers
+        content = content
+          .replace(/^#{1,6}\s*[一二三四五六七八九十]+、?\s*\n?/, '')
+          .replace(/^\d+[\.、]\s*/, '');
         
         // Handle Markdown headers
         content = content.replace(/^(#{1,6})\s(.+)$/gm, (match, hashes, title) => {
@@ -122,8 +130,14 @@ const SummaryPanel: React.FC = () => {
   const handleNoteSave = () => {
     if (editingNote && summary) {
       const notes = summary.split('\n\n---\n\n');
-      const updatedNotes = notes.map(note => 
-        note === editingNote ? editValue : note
+
+      // Remove numbering prefixes before saving the edited note
+      const processedValue = editValue
+        .replace(/^#{1,6}\s*[一二三四五六七八九十]+、?\s*\n?/, '')
+        .replace(/^\d+[\.、]\s*/, '');
+
+      const updatedNotes = notes.map(note =>
+        note === editingNote ? processedValue : note
       );
       const newSummary = updatedNotes.join('\n\n---\n\n');
       
